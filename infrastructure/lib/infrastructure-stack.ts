@@ -1,6 +1,6 @@
 import * as cdk from '@aws-cdk/core';
 import * as s3 from '@aws-cdk/aws-s3';
-import * as cloudfront from '@aws-cdk/aws-cloudfront';
+import * as iam from '@aws-cdk/aws-iam';
 
 export class InfrastructureStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -8,23 +8,18 @@ export class InfrastructureStack extends cdk.Stack {
 
     const bucket = new s3.Bucket(this, 'WebsiteBucket', {
       bucketName: 'jason-awbrey-cdk-blog',
-      websiteIndexDocument: 'index.html',
+      websiteIndexDocument: 'index.html', // 1
+      blockPublicAccess: new s3.BlockPublicAccess({ restrictPublicBuckets: false }) // 2
     });
 
-    const cloudFrontOAI = new cloudfront.OriginAccessIdentity(this, 'OAI');
-
-    const distribution = new cloudfront.CloudFrontWebDistribution(this, 'MyDistribution', {
-      originConfigs: [
-        {
-          s3OriginSource: {
-            s3BucketSource: bucket,
-            originAccessIdentity: cloudFrontOAI,
-          },
-          behaviors: [{ isDefaultBehavior: true }]
-        }
-      ]
+    // 3
+    const bucketPolicy = new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [
+        `${bucket.bucketArn}/*`
+      ],
+      principals: [new iam.Anyone()],
     })
-
-    bucket.grantRead(cloudFrontOAI.grantPrincipal);
+    bucket.addToResourcePolicy(bucketPolicy); // 4
   }
 }
